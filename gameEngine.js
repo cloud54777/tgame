@@ -101,6 +101,8 @@ export class GameEngine {
                 break;
             case 'GREEN_DURATION':
             case 'YELLOW_DURATION':
+            case 'RED_DURATION':
+            case 'YELLOW_DURATION':
             case 'MIN_GREEN_TIME':
                 this.trafficLights.updateSettings(this.settings);
                 break;

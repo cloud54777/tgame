@@ -69,26 +69,36 @@ export class TrafficLightController {
                 }
                 break;
             case 1: // North-South Yellow
-                if (this.phaseTimer >= 2000) { // Fixed 2 seconds yellow
+                if (this.phaseTimer >= this.settings.YELLOW_DURATION) {
                     this.advancePhase();
                 }
                 break;
-            case 2: // All Red (transition period)
+            case 2: // North-South Red
+                if (this.phaseTimer >= this.settings.RED_DURATION) {
+                    this.advancePhase();
+                }
+                break;
+            case 3: // All Red (transition period)
                 if (this.phaseTimer >= 2000) { // Fixed 2 seconds all red
                     this.advancePhase();
                 }
                 break;
-            case 3: // East-West Green
+            case 4: // East-West Green
                 if (this.phaseTimer >= this.settings.GREEN_DURATION) {
                     this.advancePhase();
                 }
                 break;
-            case 4: // East-West Yellow
-                if (this.phaseTimer >= 2000) { // Fixed 2 seconds yellow
+            case 5: // East-West Yellow
+                if (this.phaseTimer >= this.settings.YELLOW_DURATION) {
                     this.advancePhase();
                 }
                 break;
-            case 5: // All Red (transition period)
+            case 6: // East-West Red
+                if (this.phaseTimer >= this.settings.RED_DURATION) {
+                    this.advancePhase();
+                }
+                break;
+            case 7: // All Red (transition period)
                 if (this.phaseTimer >= 2000) { // Fixed 2 seconds all red
                     this.advancePhase();
                 }
@@ -128,7 +138,7 @@ export class TrafficLightController {
     }
 
     advancePhase() {
-    this.currentPhase = (this.currentPhase + 1) % 6;
+        this.currentPhase = (this.currentPhase + 1) % 8;
         this.phaseTimer = 0;
         this.setFixedTimerState();
     }
@@ -148,18 +158,24 @@ export class TrafficLightController {
                 this.lights[CONFIG.DIRECTIONS.NORTH].state = CONFIG.LIGHT_STATES.YELLOW;
                 this.lights[CONFIG.DIRECTIONS.SOUTH].state = CONFIG.LIGHT_STATES.YELLOW;
                 break;
-            case 2: // All Red (transition period)
+            case 2: // North-South Red
                 // All lights already set to red above
                 break;
-            case 3: // East-West Green
+            case 3: // All Red (transition period)
+                // All lights already set to red above
+                break;
+            case 4: // East-West Green
                 this.lights[CONFIG.DIRECTIONS.EAST].state = CONFIG.LIGHT_STATES.GREEN;
                 this.lights[CONFIG.DIRECTIONS.WEST].state = CONFIG.LIGHT_STATES.GREEN;
                 break;
-            case 4: // East-West Yellow
+            case 5: // East-West Yellow
                 this.lights[CONFIG.DIRECTIONS.EAST].state = CONFIG.LIGHT_STATES.YELLOW;
                 this.lights[CONFIG.DIRECTIONS.WEST].state = CONFIG.LIGHT_STATES.YELLOW;
                 break;
-            case 5: // All Red (transition period)
+            case 6: // East-West Red
+                // All lights already set to red above
+                break;
+            case 7: // All Red (transition period)
                 // All lights already set to red above
                 break;
         }

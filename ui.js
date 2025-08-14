@@ -20,6 +20,10 @@ export class UIController {
             fixedControls: document.getElementById('fixed-controls'),
             greenDuration: document.getElementById('greenDuration'),
             greenValue: document.getElementById('greenDurationValue'),
+            yellowDuration: document.getElementById('yellowDuration'),
+            yellowValue: document.getElementById('yellowDurationValue'),
+            redDuration: document.getElementById('redDuration'),
+            redValue: document.getElementById('redDurationValue'),
             
             // Adaptive controls
             adaptiveControls: document.getElementById('adaptive-controls'),
@@ -74,6 +78,8 @@ export class UIController {
 
         // Fixed timer controls
         this.setupSlider('greenDuration', 'greenValue', 'GREEN_DURATION', (value) => value * 1000);
+        this.setupSlider('yellowDuration', 'yellowValue', 'YELLOW_DURATION', (value) => value * 1000);
+        this.setupSlider('redDuration', 'redValue', 'RED_DURATION', (value) => value * 1000);
 
         // Adaptive controls
         this.setupSlider('detectorDistance', 'detectorValue', 'DETECTOR_DISTANCE');

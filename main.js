@@ -41,6 +41,8 @@ class TrafficSimulator {
                 // Get durations from sliders (convert to milliseconds)
                 const settings = {
                     GREEN_DURATION: Number(document.getElementById('greenDuration').value) * 1000,
+                    YELLOW_DURATION: Number(document.getElementById('yellowDuration').value) * 1000,
+                    RED_DURATION: Number(document.getElementById('redDuration').value) * 1000,
                     CAR_SPAWN_RATE: Number(document.getElementById('carSpawnRate').value),
                     CAR_SPEED: Number(document.getElementById('carSpeed').value),
                     MIN_GREEN_TIME: 5000,
