@@ -44,8 +44,8 @@ export class GameEngine {
         this.carManager.update(deltaTime, this.trafficLights.getLightStates());
         
         // Update sensors (for adaptive mode)
+        const sensorData = this.sensorSystem.update(this.carManager.getCars());
         if (this.mode === CONFIG.MODES.ADAPTIVE) {
-            const sensorData = this.sensorSystem.update(this.carManager.getCars());
             this.trafficLights.updateAdaptiveLogic(sensorData, deltaTime);
         }
         
@@ -60,10 +60,8 @@ export class GameEngine {
         // Render intersection
         this.intersection.render(this.ctx);
         
-        // Render sensor detection zones (for adaptive mode)
-        if (this.mode === CONFIG.MODES.ADAPTIVE) {
-            this.sensorSystem.render(this.ctx);
-        }
+        // Render sensor detection zones (for both modes to show car counts)
+        this.sensorSystem.render(this.ctx);
         
         // Render cars
         this.carManager.render(this.ctx);
