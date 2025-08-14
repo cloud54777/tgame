@@ -19,11 +19,7 @@ export class UIController {
             // Fixed timer controls
             fixedControls: document.getElementById('fixed-controls'),
             greenDuration: document.getElementById('greenDuration'),
-            yellowDuration: document.getElementById('yellowDuration'),
-            allRedDuration: document.getElementById('allRedDuration'),
             greenValue: document.getElementById('greenDurationValue'),
-            yellowValue: document.getElementById('yellowDurationValue'),
-            allRedValue: document.getElementById('redDurationValue'),
             
             // Adaptive controls
             adaptiveControls: document.getElementById('adaptive-controls'),
@@ -78,7 +74,6 @@ export class UIController {
 
         // Fixed timer controls
         this.setupSlider('greenDuration', 'greenValue', 'GREEN_DURATION', (value) => value * 1000);
-        this.setupSlider('yellowDuration', 'yellowValue', 'YELLOW_DURATION', (value) => value * 1000);
 
         // Adaptive controls
         this.setupSlider('detectorDistance', 'detectorValue', 'DETECTOR_DISTANCE');
@@ -182,17 +177,6 @@ greenSlider.addEventListener('input', () => {
     greenValue.textContent = greenSlider.value;
 });
 
-const yellowSlider = document.getElementById('yellowDuration');
-const yellowValue = document.getElementById('yellowDurationValue');
-yellowSlider.addEventListener('input', () => {
-    yellowValue.textContent = yellowSlider.value;
-});
-
-const redSlider = document.getElementById('redDuration');
-const redValue = document.getElementById('redDurationValue');
-redSlider.addEventListener('input', () => {
-    redValue.textContent = redSlider.value;
-});
 
 
 
