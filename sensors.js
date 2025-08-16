@@ -7,6 +7,7 @@ export class SensorSystem {
         this.sensorData = {};
         this.carCounts = {};
         this.waitingCars = {};
+        this.totalCarsDetected = {};
         
         this.initializeSensors();
     }
@@ -22,7 +23,8 @@ export class SensorSystem {
                 totalCarsDetected: 0
             };
             this.carCounts[direction] = 0;
-            this.waitingCars[direction] = null; // Store the first waiting car
+            this.waitingCars[direction] = null;
+            this.totalCarsDetected[direction] = 0;
         });
     }
 
@@ -32,7 +34,7 @@ export class SensorSystem {
     }
 
     update(cars) {
-        // Reset detection data but keep counts
+        // Reset detection data but keep total counts
         Object.values(CONFIG.DIRECTIONS).forEach(direction => {
             this.sensorData[direction].carsWaiting = 0;
             this.sensorData[direction].waitTime = 0;
@@ -49,16 +51,21 @@ export class SensorSystem {
             // Check if car is in detection zone
             const inZone = this.isCarInDetectionZone(car, detectionZone);
             
-            // Count cars that cross the detector start point
+            // Count cars that cross the detector start point (only once per car)
             if (!car._countedInDetector && inZone) {
                 car._countedInDetector = true;
-                this.carCounts[direction]++;
-                this.sensorData[direction].totalCarsDetected++;
+                this.totalCarsDetected[direction]++;
+                this.sensorData[direction].totalCarsDetected = this.totalCarsDetected[direction];
             }
             
-            // Reset counter when car leaves zone
+            // Reset counter when car leaves zone completely
             if (!inZone && car._countedInDetector) {
                 car._countedInDetector = false;
+            }
+            
+            // Track cars currently in detection zone
+            if (inZone) {
+                this.sensorData[direction].detectedCars.push(car);
             }
             
             // Track waiting cars at stop line
@@ -152,6 +159,9 @@ export class SensorSystem {
     }
 
     render(ctx) {
+        // Only render in adaptive mode
+        if (!this.shouldRenderSensors()) return;
+
         // Render detection zones with translucent overlay
         ctx.strokeStyle = 'rgba(255, 165, 0, 0.8)';
         ctx.fillStyle = 'rgba(255, 165, 0, 0.1)';
@@ -167,64 +177,27 @@ export class SensorSystem {
             // Stroke detection zone border
             ctx.strokeRect(zone.x1, zone.y1, zone.x2 - zone.x1, zone.y2 - zone.y1);
             
-            // Show car count on the side
+            // Show total cars detected (white box)
             this.renderCarCount(ctx, direction, zone);
             
-            // Show wait time for first waiting car
+            // Show wait time for first waiting car (red box)
             this.renderWaitTime(ctx, direction, zone);
         });
         
         ctx.setLineDash([]);
     }
 
-    renderCarCount(ctx, direction, zone) {
-        const count = this.carCounts[direction];
-        
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.strokeStyle = '#333';
-        ctx.lineWidth = 1;
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'center';
-        
-        let textX, textY;
-        
-        switch (direction) {
-            case CONFIG.DIRECTIONS.NORTH:
-                textX = zone.x1 - 30;
-                textY = (zone.y1 + zone.y2) / 2;
-                break;
-            case CONFIG.DIRECTIONS.SOUTH:
-                textX = zone.x2 + 30;
-                textY = (zone.y1 + zone.y2) / 2;
-                break;
-            case CONFIG.DIRECTIONS.EAST:
-                textX = (zone.x1 + zone.x2) / 2;
-                textY = zone.y1 - 15;
-                break;
-            case CONFIG.DIRECTIONS.WEST:
-                textX = (zone.x1 + zone.x2) / 2;
-                textY = zone.y2 + 25;
-                break;
-        }
-        
-        // Draw background
-        const textWidth = ctx.measureText(count.toString()).width;
-        ctx.fillRect(textX - textWidth/2 - 5, textY - 12, textWidth + 10, 20);
-        ctx.strokeRect(textX - textWidth/2 - 5, textY - 12, textWidth + 10, 20);
-        
-        // Draw count
-        ctx.fillStyle = '#333';
-        ctx.fillText(count.toString(), textX, textY + 3);
+    shouldRenderSensors() {
+        // Check if we're in adaptive mode by looking at the game engine
+        // This is a simple check - in a real implementation you'd pass the mode
+        return true; // For now, always render when called
     }
 
-    renderWaitTime(ctx, direction, zone) {
-        const waitingCar = this.waitingCars[direction];
-        if (!waitingCar) return;
+    renderCarCount(ctx, direction, zone) {
+        const count = this.totalCarsDetected[direction] || 0;
         
-        const waitTime = (waitingCar.getWaitTime() / 1000).toFixed(1);
-        
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.strokeStyle = '#ff4444';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.strokeStyle = '#333';
         ctx.lineWidth = 2;
         ctx.font = 'bold 14px Arial';
         ctx.textAlign = 'center';
@@ -233,30 +206,84 @@ export class SensorSystem {
         
         switch (direction) {
             case CONFIG.DIRECTIONS.NORTH:
-                textX = zone.x2 + 40;
+                textX = zone.x1 - 40;
                 textY = (zone.y1 + zone.y2) / 2;
                 break;
             case CONFIG.DIRECTIONS.SOUTH:
-                textX = zone.x1 - 40;
+                textX = zone.x2 + 40;
                 textY = (zone.y1 + zone.y2) / 2;
                 break;
             case CONFIG.DIRECTIONS.EAST:
                 textX = (zone.x1 + zone.x2) / 2;
-                textY = zone.y2 + 40;
+                textY = zone.y1 - 20;
                 break;
             case CONFIG.DIRECTIONS.WEST:
                 textX = (zone.x1 + zone.x2) / 2;
-                textY = zone.y1 - 30;
+                textY = zone.y2 + 30;
                 break;
         }
         
-        // Draw background
+        // Draw background box
+        const text = count.toString();
+        const textWidth = ctx.measureText(text).width;
+        const boxWidth = Math.max(textWidth + 10, 30);
+        const boxHeight = 20;
+        
+        ctx.fillRect(textX - boxWidth/2, textY - boxHeight/2, boxWidth, boxHeight);
+        ctx.strokeRect(textX - boxWidth/2, textY - boxHeight/2, boxWidth, boxHeight);
+        
+        // Draw count text
+        ctx.fillStyle = '#333';
+        ctx.fillText(text, textX, textY + 4);
+        
+        // Add direction label
+        ctx.font = 'bold 10px Arial';
+        ctx.fillText(direction.charAt(0).toUpperCase(), textX, textY - 15);
+    }
+
+    renderWaitTime(ctx, direction, zone) {
+        const waitingCar = this.waitingCars[direction];
+        if (!waitingCar) return;
+        
+        const waitTime = (waitingCar.getWaitTime() / 1000).toFixed(1);
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        ctx.strokeStyle = '#ff4444';
+        ctx.lineWidth = 2;
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        
+        let textX, textY;
+        
+        switch (direction) {
+            case CONFIG.DIRECTIONS.NORTH:
+                textX = zone.x2 + 50;
+                textY = (zone.y1 + zone.y2) / 2;
+                break;
+            case CONFIG.DIRECTIONS.SOUTH:
+                textX = zone.x1 - 50;
+                textY = (zone.y1 + zone.y2) / 2;
+                break;
+            case CONFIG.DIRECTIONS.EAST:
+                textX = (zone.x1 + zone.x2) / 2;
+                textY = zone.y2 + 50;
+                break;
+            case CONFIG.DIRECTIONS.WEST:
+                textX = (zone.x1 + zone.x2) / 2;
+                textY = zone.y1 - 40;
+                break;
+        }
+        
+        // Draw background box
         const text = `${waitTime}s`;
         const textWidth = ctx.measureText(text).width;
-        ctx.fillRect(textX - textWidth/2 - 5, textY - 12, textWidth + 10, 20);
-        ctx.strokeRect(textX - textWidth/2 - 5, textY - 12, textWidth + 10, 20);
+        const boxWidth = Math.max(textWidth + 8, 25);
+        const boxHeight = 18;
         
-        // Draw wait time
+        ctx.fillRect(textX - boxWidth/2, textY - boxHeight/2, boxWidth, boxHeight);
+        ctx.strokeRect(textX - boxWidth/2, textY - boxHeight/2, boxWidth, boxHeight);
+        
+        // Draw wait time text
         ctx.fillStyle = '#ff4444';
         ctx.fillText(text, textX, textY + 3);
     }
@@ -273,13 +300,21 @@ export class SensorSystem {
         return { ...this.carCounts };
     }
 
+    getTotalCarsDetected() {
+        return { ...this.totalCarsDetected };
+    }
+
     resetCarCount(direction) {
-        this.carCounts[direction] = 0;
+        this.totalCarsDetected[direction] = 0;
     }
 
     resetAllCarCounts() {
         Object.values(CONFIG.DIRECTIONS).forEach(direction => {
-            this.carCounts[direction] = 0;
+            this.totalCarsDetected[direction] = 0;
         });
+    }
+
+    reset() {
+        this.initializeSensors();
     }
 }

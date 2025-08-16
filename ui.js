@@ -130,17 +130,25 @@ export class UIController {
 
     updateStatistics() {
         const stats = this.gameEngine.getStatistics();
-        const carCounts = this.gameEngine.sensorSystem.getCarCounts();
+        const totalCarsDetected = this.gameEngine.sensorSystem.getTotalCarsDetected();
         
         this.elements.carsPassedStat.textContent = stats.totalCarsPassed;
         this.elements.avgWaitStat.textContent = stats.averageWaitTime.toFixed(1) + 's';
         this.elements.currentCarsStat.textContent = stats.currentCars;
         
-        // Update car count statistics
-        this.elements.northCountStat.textContent = carCounts.north || 0;
-        this.elements.southCountStat.textContent = carCounts.south || 0;
-        this.elements.eastCountStat.textContent = carCounts.east || 0;
-        this.elements.westCountStat.textContent = carCounts.west || 0;
+        // Update car count statistics (only show in adaptive mode)
+        if (this.gameEngine.getCurrentMode() === 'adaptive') {
+            this.elements.northCountStat.textContent = totalCarsDetected.north || 0;
+            this.elements.southCountStat.textContent = totalCarsDetected.south || 0;
+            this.elements.eastCountStat.textContent = totalCarsDetected.east || 0;
+            this.elements.westCountStat.textContent = totalCarsDetected.west || 0;
+        } else {
+            // Hide counts in fixed mode
+            this.elements.northCountStat.textContent = '-';
+            this.elements.southCountStat.textContent = '-';
+            this.elements.eastCountStat.textContent = '-';
+            this.elements.westCountStat.textContent = '-';
+        }
     }
 
     updateLightStatus() {
