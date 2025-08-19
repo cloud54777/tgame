@@ -32,7 +32,9 @@ export const CONFIG = {
 
     // Turn types
     TURN_TYPES: {
-        STRAIGHT: 'straight'
+        STRAIGHT: 'straight',
+        LEFT: 'left',
+        RIGHT: 'right'
     },
 
     // Modes
@@ -58,7 +60,7 @@ export const CONFIG = {
         RED_DURATION: 100000,        // 100 seconds
         CAR_SPAWN_RATE: 4,           // cars per 10 seconds
         CAR_SPEED: 25,               // pixels per second
-        TURN_RATE: 0.25,             // 25% chance to turn
+        TURN_RATE: 0.4,              // 40% chance to turn (20% left, 20% right, 60% straight)
         DETECTOR_DISTANCE: 200,      // Increased range for adaptive mode
         MIN_GREEN_TIME: 5000         // 5 seconds minimum green
     },

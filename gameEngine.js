@@ -12,6 +12,7 @@ export class GameEngine {
         this.ctx = ctx;
         // Game components
         this.intersection = new Intersection(CONFIG.CANVAS_WIDTH / 2, CONFIG.CANVAS_HEIGHT / 2);
+        this.roadNetwork = new RoadNetwork(this.intersection);
         this.trafficLights = new TrafficLightController();
         this.carManager = new CarManager(this.intersection);
         this.sensorSystem = new SensorSystem(this.intersection);
@@ -61,6 +62,9 @@ export class GameEngine {
         
         // Render intersection
         this.intersection.render(this.ctx);
+        
+        // Render road network
+        this.roadNetwork.render(this.ctx);
         
         // Render sensor detection zones (only in adaptive mode)
         if (this.mode === CONFIG.MODES.ADAPTIVE) {

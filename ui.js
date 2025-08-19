@@ -87,7 +87,8 @@ export class UIController {
 
         // Car controls
         this.setupSlider('carSpawnRate', 'spawnValue', 'CAR_SPAWN_RATE');
-        this.setupSlider('carSpeed', 'speedValue', 'CAR_SPEED');
+        this.setupSlider('carSpeed', 'speedValue', 'CAR_SPEED'),
+        this.setupSlider('turnRate', 'turnValue', 'TURN_RATE', value => value / 100)
     // ...existing code...
     }
 

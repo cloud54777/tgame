@@ -68,43 +68,43 @@ this.stopLines = {
             }
         };
 
-        // Car spawn points
+        // Car spawn points - now with lane support
         this.spawnPoints = {
             [CONFIG.DIRECTIONS.NORTH]: {
-                x: this.centerX - laneOffset, // Right lane for cars going south
-                y: 0
+                left: { x: this.centerX - laneOffset, y: 0 },
+                right: { x: this.centerX + laneOffset, y: 0 }
             },
             [CONFIG.DIRECTIONS.EAST]: {
-                x: CONFIG.CANVAS_WIDTH,
-                y: this.centerY - laneOffset // Right lane for cars going west
+                left: { x: CONFIG.CANVAS_WIDTH, y: this.centerY - laneOffset },
+                right: { x: CONFIG.CANVAS_WIDTH, y: this.centerY + laneOffset }
             },
             [CONFIG.DIRECTIONS.SOUTH]: {
-                x: this.centerX + laneOffset, // Right lane for cars going north
-                y: CONFIG.CANVAS_HEIGHT
+                left: { x: this.centerX + laneOffset, y: CONFIG.CANVAS_HEIGHT },
+                right: { x: this.centerX - laneOffset, y: CONFIG.CANVAS_HEIGHT }
             },
             [CONFIG.DIRECTIONS.WEST]: {
-                x: 0,
-                y: this.centerY + laneOffset // Right lane for cars going east
+                left: { x: 0, y: this.centerY + laneOffset },
+                right: { x: 0, y: this.centerY - laneOffset }
             }
         };
 
-        // Exit points - these are for straight-through traffic
+        // Exit points - now with lane support
         this.exitPoints = {
             [CONFIG.DIRECTIONS.NORTH]: {
-                x: this.centerX + laneOffset,
-                y: 0
+                left: { x: this.centerX - laneOffset, y: 0 },
+                right: { x: this.centerX + laneOffset, y: 0 }
             },
             [CONFIG.DIRECTIONS.EAST]: {
-                x: CONFIG.CANVAS_WIDTH,
-                y: this.centerY + laneOffset
+                left: { x: CONFIG.CANVAS_WIDTH, y: this.centerY - laneOffset },
+                right: { x: CONFIG.CANVAS_WIDTH, y: this.centerY + laneOffset }
             },
             [CONFIG.DIRECTIONS.SOUTH]: {
-                x: this.centerX - laneOffset,
-                y: CONFIG.CANVAS_HEIGHT
+                left: { x: this.centerX + laneOffset, y: CONFIG.CANVAS_HEIGHT },
+                right: { x: this.centerX - laneOffset, y: CONFIG.CANVAS_HEIGHT }
             },
             [CONFIG.DIRECTIONS.WEST]: {
-                x: 0,
-                y: this.centerY - laneOffset
+                left: { x: 0, y: this.centerY + laneOffset },
+                right: { x: 0, y: this.centerY - laneOffset }
             }
         };
     }
@@ -232,26 +232,12 @@ drawIntersection(ctx) {
         return this.stopLines[direction];
     }
 
-    getSpawnPoint(direction) {
-        const offset = 300; // Adjust as needed for your canvas
-        switch (direction) {
-            case 'north': return { x: this.centerX, y: this.centerY - offset };
-            case 'south': return { x: this.centerX, y: this.centerY + offset };
-            case 'east':  return { x: this.centerX + offset, y: this.centerY };
-            case 'west':  return { x: this.centerX - offset, y: this.centerY };
-            default: return undefined;
-        }
+    getSpawnPoint(direction, lane = 'right') {
+        return this.spawnPoints[direction] ? this.spawnPoints[direction][lane] : null;
     }
 
-    getExitPoint(direction) {
-        const offset = 300; // Adjust as needed for your canvas
-        switch (direction) {
-            case 'north': return { x: this.centerX, y: this.centerY - offset };
-            case 'south': return { x: this.centerX, y: this.centerY + offset };
-            case 'east':  return { x: this.centerX + offset, y: this.centerY };
-            case 'west':  return { x: this.centerX - offset, y: this.centerY };
-            default: return undefined;
-        }
+    getExitPoint(direction, lane = 'right') {
+        return this.exitPoints[direction] ? this.exitPoints[direction][lane] : null;
     }
 getLightPosition(direction) {
     if (!direction || typeof direction !== 'string') {
@@ -272,21 +258,111 @@ getLightPosition(direction) {
         );
     }
 
-    // Get proper exit point based on turn type to ensure correct lane usage
-    // ...existing code...
-    getProperExitPoint(fromDirection, toDirection, turnType) {
-        const laneOffset = this.laneWidth / 2;
-
-        // Improved turn logic based on your description
-        // Removed turning logic
-        return this.exitPoints[toDirection];
+    // Generate trajectory for turning movements
+    getTrajectory(fromDirection, toDirection, turnType) {
+        const trajectoryPoints = [];
+        const numPoints = 20; // Number of points in trajectory
+        
+        const entryPoint = this.getPathEntryPoint(fromDirection);
+        const exitPoint = this.getPathExitPoint(toDirection, turnType);
+        
+        if (!entryPoint || !exitPoint) return null;
+        
+        if (turnType === CONFIG.TURN_TYPES.STRAIGHT) {
+            // Straight line trajectory
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                trajectoryPoints.push({
+                    x: entryPoint.x + (exitPoint.x - entryPoint.x) * t,
+                    y: entryPoint.y + (exitPoint.y - entryPoint.y) * t
+                });
+            }
+        } else {
+            // Curved trajectory for turns
+            const controlPoints = this.getControlPoints(fromDirection, toDirection, turnType);
+            
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                const point = this.getBezierPoint(t, entryPoint, controlPoints.cp1, controlPoints.cp2, exitPoint);
+                trajectoryPoints.push(point);
+            }
+        }
+        
+        return trajectoryPoints;
     }
-// ...existing code...
-
-    // Get turning path for straight-line turns (no curves)
-    getTurningPath(fromDirection, toDirection, turnType) {
-        // For straight corners, cars just need entry and exit points
-        return [this.getPathEntryPoint(fromDirection), this.exitPoints[toDirection]];
+    
+    getStraightTrajectory(fromDirection, toDirection) {
+        return this.getTrajectory(fromDirection, toDirection, CONFIG.TURN_TYPES.STRAIGHT);
+    }
+    
+    getControlPoints(fromDirection, toDirection, turnType) {
+        const centerX = this.centerX;
+        const centerY = this.centerY;
+        const radius = this.size / 3;
+        
+        let cp1, cp2;
+        
+        if (turnType === CONFIG.TURN_TYPES.LEFT) {
+            // Left turn control points
+            switch (fromDirection) {
+                case CONFIG.DIRECTIONS.NORTH:
+                    cp1 = { x: centerX - radius, y: centerY - radius };
+                    cp2 = { x: centerX - radius, y: centerY - radius };
+                    break;
+                case CONFIG.DIRECTIONS.EAST:
+                    cp1 = { x: centerX + radius, y: centerY - radius };
+                    cp2 = { x: centerX + radius, y: centerY - radius };
+                    break;
+                case CONFIG.DIRECTIONS.SOUTH:
+                    cp1 = { x: centerX + radius, y: centerY + radius };
+                    cp2 = { x: centerX + radius, y: centerY + radius };
+                    break;
+                case CONFIG.DIRECTIONS.WEST:
+                    cp1 = { x: centerX - radius, y: centerY + radius };
+                    cp2 = { x: centerX - radius, y: centerY + radius };
+                    break;
+            }
+        } else if (turnType === CONFIG.TURN_TYPES.RIGHT) {
+            // Right turn control points
+            switch (fromDirection) {
+                case CONFIG.DIRECTIONS.NORTH:
+                    cp1 = { x: centerX + radius, y: centerY - radius };
+                    cp2 = { x: centerX + radius, y: centerY - radius };
+                    break;
+                case CONFIG.DIRECTIONS.EAST:
+                    cp1 = { x: centerX + radius, y: centerY + radius };
+                    cp2 = { x: centerX + radius, y: centerY + radius };
+                    break;
+                case CONFIG.DIRECTIONS.SOUTH:
+                    cp1 = { x: centerX - radius, y: centerY + radius };
+                    cp2 = { x: centerX - radius, y: centerY + radius };
+                    break;
+                case CONFIG.DIRECTIONS.WEST:
+                    cp1 = { x: centerX - radius, y: centerY - radius };
+                    cp2 = { x: centerX - radius, y: centerY - radius };
+                    break;
+            }
+        }
+        
+        return { cp1, cp2 };
+    }
+    
+    getBezierPoint(t, p0, p1, p2, p3) {
+        const cx = 3 * (p1.x - p0.x);
+        const bx = 3 * (p2.x - p1.x) - cx;
+        const ax = p3.x - p0.x - cx - bx;
+        
+        const cy = 3 * (p1.y - p0.y);
+        const by = 3 * (p2.y - p1.y) - cy;
+        const ay = p3.y - p0.y - cy - by;
+        
+        const tSquared = t * t;
+        const tCubed = tSquared * t;
+        
+        return {
+            x: ax * tCubed + bx * tSquared + cx * t + p0.x,
+            y: ay * tCubed + by * tSquared + cy * t + p0.y
+        };
     }
 
     getPathEntryPoint(direction) {
@@ -304,10 +380,40 @@ getLightPosition(direction) {
                 return { x: this.centerX - halfRoad, y: this.centerY + laneOffset };
         }
     }
+    
+    getPathExitPoint(direction, turnType) {
+        const halfRoad = this.roadWidth / 2;
+        const laneOffset = this.laneWidth / 2;
+        
+        // Determine which lane to exit into based on turn type
+        let exitLaneOffset = laneOffset;
+        if (turnType === CONFIG.TURN_TYPES.LEFT) {
+            exitLaneOffset = -laneOffset; // Exit into right lane after left turn
+        } else if (turnType === CONFIG.TURN_TYPES.RIGHT) {
+            exitLaneOffset = laneOffset; // Exit into left lane after right turn
+        }
+        
+        switch (direction) {
+            case CONFIG.DIRECTIONS.NORTH:
+                return { x: this.centerX + exitLaneOffset, y: this.centerY - halfRoad };
+            case CONFIG.DIRECTIONS.EAST:
+                return { x: this.centerX + halfRoad, y: this.centerY + exitLaneOffset };
+            case CONFIG.DIRECTIONS.SOUTH:
+                return { x: this.centerX - exitLaneOffset, y: this.centerY + halfRoad };
+            case CONFIG.DIRECTIONS.WEST:
+                return { x: this.centerX - halfRoad, y: this.centerY - exitLaneOffset };
+            default:
+                return { x: this.centerX, y: this.centerY };
+        }
+    }
 
     // Method to provide car manager reference to cars
     setCarManager(carManager) {
         this.carManager = carManager;
+    }
+    
+    setRoadNetwork(roadNetwork) {
+        this.roadNetwork = roadNetwork;
     }
     
     getAllCars() {
